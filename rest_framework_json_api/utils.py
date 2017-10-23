@@ -318,6 +318,27 @@ def get_relation_instance(resource_instance, source, serializer):
     return (True, relation_instance)
 
 
+def get_instance_from_id(model_class, id):
+    json_api_meta = getattr(model_class, 'JSONAPIMeta', None)
+    get_instance = getattr(json_api_meta, 'get_instance_from_id', None)
+    if get_instance is not None:
+        return get_instance(id)
+    return model_class.objects.get(pk=id)
+
+
+def get_id_from_instance(model_instance):
+    json_api_meta = getattr(model_instance, 'JSONAPIMeta', None)
+    get_id = getattr(json_api_meta, 'get_id_from_instance', None)
+    if get_id is not None:
+        return get_id(model_instance)
+    return model_instance.pk
+
+
+def skip_null_values(model):
+    json_api_meta = getattr(model, 'JSONAPIMeta', None)
+    return getattr(json_api_meta, 'skip_null_values', False)
+
+
 class Hyperlink(six.text_type):
     """
     A string like object that additionally has an associated name.

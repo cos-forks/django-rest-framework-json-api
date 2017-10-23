@@ -7,9 +7,14 @@ from django.utils.translation import ugettext_lazy as _
 from django.db.models.query import QuerySet
 
 from rest_framework_json_api.exceptions import Conflict
-from rest_framework_json_api.utils import Hyperlink, \
-    get_resource_type_from_queryset, get_resource_type_from_instance, \
-    get_included_serializers, get_resource_type_from_serializer
+from rest_framework_json_api.utils import (
+    Hyperlink,
+    get_id_from_instance,
+    get_included_serializers,
+    get_resource_type_from_instance,
+    get_resource_type_from_queryset,
+    get_resource_type_from_serializer,
+)
 
 LINKS_PARAMS = ['self_link_view_name', 'related_link_view_name', 'related_link_lookup_field', 'related_link_url_kwarg']
 
@@ -140,7 +145,7 @@ class ResourceRelatedField(PrimaryKeyRelatedField):
         if getattr(self, 'pk_field', None) is not None:
             pk = self.pk_field.to_representation(value.pk)
         else:
-            pk = value.pk
+            pk = get_id_from_instance(value)
 
         # check to see if this resource has a different resource_name when
         # included and use that name
