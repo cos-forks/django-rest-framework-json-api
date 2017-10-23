@@ -21,8 +21,10 @@ from rest_framework.settings import api_settings
 from rest_framework_json_api.exceptions import Conflict
 from rest_framework_json_api.relations import ResourceRelatedField
 from rest_framework_json_api.utils import (
+    get_id_from_instance,
     get_included_resources,
     get_included_serializers,
+    get_instance_from_id,
     get_resource_type_from_instance,
     get_resource_type_from_model,
     get_resource_type_from_serializer,
@@ -49,7 +51,7 @@ class ResourceIdentifierObjectSerializer(BaseSerializer):
     def to_representation(self, instance):
         return {
             "type": get_resource_type_from_instance(instance),
-            "id": str(instance.pk),
+            "id": str(get_id_from_instance(instance)),
         }
 
     def to_internal_value(self, data):
@@ -59,13 +61,12 @@ class ResourceIdentifierObjectSerializer(BaseSerializer):
                 model_type=self.model_class,
                 received_type=data["type"],
             )
-        pk = data["id"]
         try:
-            return self.model_class.objects.get(pk=pk)
+            return get_instance_from_id(self.model_class, data['id'])
         except ObjectDoesNotExist:
-            self.fail("does_not_exist", pk_value=pk)
+            self.fail("does_not_exist", pk_value=data["id"])
         except (TypeError, ValueError):
-            self.fail("incorrect_type", data_type=type(data["pk"]).__name__)
+            self.fail("incorrect_type", data_type=type(data["id"]).__name__)
 
 
 class SparseFieldsetsMixin(object):

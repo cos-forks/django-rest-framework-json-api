@@ -52,7 +52,7 @@ class JSONRenderer(renderers.JSONRenderer):
     format = "vnd.api+json"
 
     @classmethod
-    def extract_attributes(cls, fields, resource):
+    def extract_attributes(cls, fields, resource, skip_nulls=False):
         """
         Builds the `attributes` object of the JSON API resource object.
         """
@@ -77,7 +77,12 @@ class JSONRenderer(renderers.JSONRenderer):
                 if fields[field_name].read_only:
                     continue
 
-            data.update({field_name: resource.get(field_name)})
+            field_value = resource.get(field_name)
+            # Skip fields with null values, if requested
+            if skip_nulls and field_value is None:
+                continue
+
+            data.update({field_name: field_value})
 
         return utils.format_field_names(data)
 
@@ -132,7 +137,7 @@ class JSONRenderer(renderers.JSONRenderer):
                         OrderedDict(
                             [
                                 ("type", relation_type),
-                                ("id", encoding.force_str(related_object.pk)),
+                                ("id", encoding.force_str(utils.get_id_from_instance(related_object))),
                             ]
                         )
                     )
@@ -238,7 +243,7 @@ class JSONRenderer(renderers.JSONRenderer):
                         OrderedDict(
                             [
                                 ("type", nested_resource_instance_type),
-                                ("id", encoding.force_str(nested_resource_instance.pk)),
+                                ("id", encoding.force_text(utils.get_id_from_instance(nested_resource_instance))),
                             ]
                         )
                     )
@@ -463,9 +468,9 @@ class JSONRenderer(renderers.JSONRenderer):
             ("type", resource_name),
             (
                 "id",
-                encoding.force_str(resource_instance.pk) if resource_instance else None,
+                encoding.force_str(utils.get_id_from_instance(resource_instance)) if resource_instance else None,
             ),
-            ("attributes", cls.extract_attributes(fields, resource)),
+            ("attributes", cls.extract_attributes(fields, resource, utils.skip_null_values(resource_instance))),
         ]
         relationships = cls.extract_relationships(fields, resource, resource_instance)
         if relationships:
@@ -514,7 +519,10 @@ class JSONRenderer(renderers.JSONRenderer):
 
         # If this is an error response, skip the rest.
         if resource_name == "errors":
-            return self.render_errors(data, accepted_media_type, renderer_context)
+            if (isinstance(data, dict) and 'data' in data):
+                resource_name = utils.get_resource_name(renderer_context, ignore_error_code=True)
+            else:
+                return self.render_errors(data, accepted_media_type, renderer_context)
 
         # if response.status_code is 204 then the data to be rendered must
         # be None
@@ -545,6 +553,8 @@ class JSONRenderer(renderers.JSONRenderer):
 
         if data and "results" in data:
             serializer_data = data["results"]
+        elif data and 'errors' in data and 'data' in data:
+            serializer_data = data['data']
         else:
             serializer_data = data
 
@@ -626,6 +636,9 @@ class JSONRenderer(renderers.JSONRenderer):
 
         # Make sure we render data in a specific order
         render_data = OrderedDict()
+
+        if isinstance(data, dict) and data.get("errors"):
+            render_data["errors"] = data.get("errors")
 
         if isinstance(data, dict) and data.get("links"):
             render_data["links"] = data.get("links")
