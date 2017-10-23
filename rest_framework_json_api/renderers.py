@@ -38,7 +38,7 @@ class JSONRenderer(renderers.JSONRenderer):
     format = 'vnd.api+json'
 
     @classmethod
-    def extract_attributes(cls, fields, resource):
+    def extract_attributes(cls, fields, resource, skip_nulls=False):
         data = OrderedDict()
         for field_name, field in six.iteritems(fields):
             # ID is always provided in the root of JSON API so remove it from attributes
@@ -59,7 +59,7 @@ class JSONRenderer(renderers.JSONRenderer):
             try:
                 resource[field_name]
             except KeyError:
-                if fields[field_name].read_only:
+                if skip_nulls or fields[field_name].read_only:
                     continue
 
             data.update({
@@ -110,7 +110,7 @@ class JSONRenderer(renderers.JSONRenderer):
                     relation_data.append(
                         OrderedDict([
                             ('type', relation_type),
-                            ('id', encoding.force_text(related_object.pk))
+                            ('id', encoding.force_text(utils.get_id_from_instance(related_object)))
                         ])
                     )
 
@@ -216,7 +216,7 @@ class JSONRenderer(renderers.JSONRenderer):
 
                     relation_data.append(OrderedDict([
                         ('type', nested_resource_instance_type),
-                        ('id', encoding.force_text(nested_resource_instance.pk))
+                        ('id', encoding.force_text(utils.get_id_from_instance(nested_resource_instance)))
                     ]))
                 data.update({
                     field_name: {
@@ -249,7 +249,7 @@ class JSONRenderer(renderers.JSONRenderer):
 
                         relation_data.append(OrderedDict([
                             ('type', nested_resource_instance_type),
-                            ('id', encoding.force_text(nested_resource_instance.pk))
+                            ('id', encoding.force_text(utils.get_id_from_instance(nested_resource_instance)))
                         ]))
 
                     data.update({field_name: {'data': relation_data}})
@@ -267,7 +267,7 @@ class JSONRenderer(renderers.JSONRenderer):
                         'data': (
                             OrderedDict([
                                 ('type', relation_type),
-                                ('id', encoding.force_text(relation_instance.pk))
+                                ('id', encoding.force_text(utils.get_id_from_instance(relation_instance)))
                             ]) if resource.get(field_name) else None)
                     }
                 })
@@ -458,8 +458,8 @@ class JSONRenderer(renderers.JSONRenderer):
             resource_name = utils.get_resource_type_from_instance(resource_instance)
         resource_data = [
             ('type', resource_name),
-            ('id', encoding.force_text(resource_instance.pk) if resource_instance else None),
-            ('attributes', cls.extract_attributes(fields, resource)),
+            ('id', encoding.force_text(utils.get_id_from_instance(resource_instance)) if resource_instance else None),
+            ('attributes', cls.extract_attributes(fields, resource, utils.skip_null_values(resource_instance))),
         ]
         relationships = cls.extract_relationships(fields, resource, resource_instance)
         if relationships:

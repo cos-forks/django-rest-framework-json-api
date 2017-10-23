@@ -15,6 +15,7 @@ from rest_framework.serializers import Serializer
 from rest_framework_json_api.exceptions import Conflict
 from rest_framework_json_api.utils import (
     Hyperlink,
+    get_id_from_instance,
     get_included_serializers,
     get_resource_type_from_instance,
     get_resource_type_from_queryset,
@@ -175,7 +176,7 @@ class ResourceRelatedField(PrimaryKeyRelatedField):
         if getattr(self, 'pk_field', None) is not None:
             pk = self.pk_field.to_representation(value.pk)
         else:
-            pk = value.pk
+            pk = get_id_from_instance(value)
 
         resource_type = self.get_resource_type_from_included_serializer()
         if resource_type is None or not self._skip_polymorphic_optimization:
