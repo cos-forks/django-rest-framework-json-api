@@ -322,7 +322,7 @@ def get_instance_from_id(model_class, id):
     json_api_meta = getattr(model_class, 'JSONAPIMeta', None)
     get_instance = getattr(json_api_meta, 'get_instance_from_id', None)
     if get_instance is not None:
-        return get_instance(id)
+        return get_instance(model_class, id)
     return model_class.objects.get(pk=id)
 
 
