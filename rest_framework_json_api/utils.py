@@ -52,7 +52,7 @@ else:
     )
 
 
-def get_resource_name(context, expand_polymorphic_types=False):
+def get_resource_name(context, expand_polymorphic_types=False, ignore_error_code=False):
     """
     Return the name of a resource.
     """
@@ -70,7 +70,7 @@ def get_resource_name(context, expand_polymorphic_types=False):
     except (AttributeError, ValueError):
         pass
     else:
-        if code.startswith('4') or code.startswith('5'):
+        if not ignore_error_code and code.startswith('4') or code.startswith('5'):
             return 'errors'
 
     try:
@@ -451,6 +451,8 @@ def format_drf_errors(response, context, exc):
 
 
 def format_errors(data):
+    if isinstance(data, dict) and 'errors' in data:
+        return data
     if len(data) > 1 and isinstance(data, list):
         data.sort(key=lambda x: x.get('source', {}).get('pointer', ''))
     return {'errors': data}

@@ -498,7 +498,10 @@ class JSONRenderer(renderers.JSONRenderer):
 
         # If this is an error response, skip the rest.
         if resource_name == 'errors':
-            return self.render_errors(data, accepted_media_type, renderer_context)
+            if (isinstance(data, dict) and 'data' in data):
+                resource_name = utils.get_resource_name(renderer_context, ignore_error_code=True)
+            else:
+                return self.render_errors(data, accepted_media_type, renderer_context)
 
         # if response.status_code is 204 then the data to be rendered must
         # be None
@@ -526,6 +529,8 @@ class JSONRenderer(renderers.JSONRenderer):
 
         if data and 'results' in data:
             serializer_data = data["results"]
+        elif data and 'errors' in data and 'data' in data:
+            serializer_data = data['data']
         else:
             serializer_data = data
 
@@ -582,6 +587,9 @@ class JSONRenderer(renderers.JSONRenderer):
 
         # Make sure we render data in a specific order
         render_data = OrderedDict()
+
+        if isinstance(data, dict) and data.get('errors'):
+            render_data['errors'] = data.get('errors')
 
         if isinstance(data, dict) and data.get('links'):
             render_data['links'] = data.get('links')
