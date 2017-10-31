@@ -58,11 +58,16 @@ class JSONRenderer(renderers.JSONRenderer):
             try:
                 resource[field_name]
             except KeyError:
-                if skip_nulls or fields[field_name].read_only:
+                if fields[field_name].read_only:
                     continue
 
+            field_value = resource.get(field_name)
+            # Skip fields with null values, if requested
+            if skip_nulls and field_value is None:
+                continue
+
             data.update({
-                field_name: resource.get(field_name)
+                field_name: field_value
             })
 
         return utils.format_keys(data)
